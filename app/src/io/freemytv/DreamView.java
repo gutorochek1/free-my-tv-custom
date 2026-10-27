@@ -558,29 +558,32 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         Canvas c = chrome.beginRecording(w, h);
         try {
             float right = RIGHT * k;
-            float x = right;
-            HomeData.Weather wx = data.weather;
-            if (!Double.isNaN(wx.temp) && Prefs.weather()) {
-                String temp = HomeData.degrees(wx.temp);
-                float tw = cornerDate.measureText(temp);
-                c.drawText(temp, x - tw, DATE_BASE * k, cornerDate);
-                x -= tw + 10 * k;
-                String symbol = Symbols.weather(wx.code, wx.isDay);
-                float size = 30 * k, sw = Symbols.width(getContext(), symbol, size);
-                Symbols.draw(getContext(), c, symbol, x - sw / 2, DATE_BASE * k - Ui.halfCap(cornerDate), size, 0xEBFFFFFF);
-                x -= sw + 26 * k;
-            }
-            c.drawText(date, x - cornerDate.measureText(date), DATE_BASE * k, cornerDate);
+            c.drawText(date, right - cornerDate.measureText(date), DATE_BASE * k, cornerDate);
 
             Glass g = glass;
+            float clockLeft;
             if (g != null && glassShader != null) {
                 // The shadow under the glass: sets the digits apart from a bright photo.
                 shadowPaint.setAlpha(140);
                 c.drawBitmap(g.shadow, g.x, g.y + 6 * k, shadowPaint);
+                clockLeft = g.x;
             } else {
                 Rect ink = new Rect();
                 cornerClock.getTextBounds(clock, 0, clock.length(), ink);
                 c.drawText(clock, right - ink.right, CLOCK_TOP * k - ink.top, cornerClock);
+                clockLeft = right - ink.right - cornerClock.measureText(clock);
+            }
+
+            HomeData.Weather wx = data.weather;
+            if (!Double.isNaN(wx.temp) && Prefs.weather()) {
+                float weatherY = (CLOCK_TOP + Ui.cap(cornerClock) / k + 28) * k;
+                String temp = HomeData.degrees(wx.temp);
+                String symbol = Symbols.weather(wx.code, wx.isDay);
+                float size = 30 * k, sw = Symbols.width(getContext(), symbol, size);
+                float wxX = clockLeft;
+                Symbols.draw(getContext(), c, symbol, wxX + sw / 2, weatherY - Ui.halfCap(cornerDate), size, 0xEBFFFFFF);
+                wxX += sw + 16 * k;
+                c.drawText(temp, wxX, weatherY, cornerDate);
             }
 
             // Compact prices under the clock, right-aligned.
@@ -834,7 +837,7 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         c.drawText(date, cx, clockBase - clockCap - 34 * k, datePaint);
         c.drawText(clock, cx, clockBase, clockPaint);
 
-        // Weather: symbol, temperature, high and low, centered under the clock.
+        // Weather: symbol, temperature, high and low, left-aligned under the clock.
         HomeData.Weather wx = data.weather;
         if (!Double.isNaN(wx.temp) && Prefs.weather()) {
             float base = clockBase + 76 * k;
@@ -846,11 +849,12 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
                 rangeGeneration = Ui.generation;
                 rangePrefs = Prefs.version;
             }
+            float clockWidth = clockPaint.measureText(clock);
+            float clockLeft = cx - clockWidth / 2;
             float sw = Symbols.width(getContext(), symbol, 32 * k);
-            float width = sw + 12 * k + weatherPaint.measureText(now) + 18 * k + weatherDim.measureText(range);
-            float x = cx - width / 2;
+            float x = clockLeft;
             Symbols.draw(getContext(), c, symbol, x + sw / 2, base - Ui.halfCap(weatherPaint), 32 * k, 0xC7FFFFFF);
-            x += sw + 12 * k;
+            x += sw + 16 * k;
             c.drawText(now, x, base, weatherPaint);
             x += weatherPaint.measureText(now) + 18 * k;
             c.drawText(range, x, base, weatherDim);
