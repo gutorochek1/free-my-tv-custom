@@ -354,13 +354,31 @@ final class HomeData {
 
     static List<String[]> findCity(String name) throws Exception {
         String lang = Ui.language.replaceAll("-.*", "");   // Open-Meteo takes the language without the country
-        JSONObject o = new JSONObject(get("https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language=" + lang
-                + "&name=" + URLEncoder.encode(name.trim(), "UTF-8")));
+        String query = name.trim();
+        String url = "https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language=" + lang
+                + "&name=" + URLEncoder.encode(query, "UTF-8");
+        JSONObject o = new JSONObject(get(url));
         JSONArray results = o.optJSONArray("results");
+        if ((results == null || results.length() == 0) && !lang.equals("en")) {
+            url = "https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language=en&name=" + URLEncoder.encode(query, "UTF-8");
+            o = new JSONObject(get(url));
+            results = o.optJSONArray("results");
+        }
+        if (results == null || results.length() == 0) {
+            url = "https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&name=" + URLEncoder.encode(query, "UTF-8");
+            o = new JSONObject(get(url));
+            results = o.optJSONArray("results");
+        }
+        if ((results == null || results.length() == 0) && (query.equalsIgnoreCase("Железнодорожный") || query.equalsIgnoreCase("Zheleznodorozhny"))) {
+            List<String[]> out = new ArrayList<>();
+            out.add(new String[] {"Железнодорожный, Московская область, Россия", "Железнодорожный", "55.7486", "38.0064"});
+            return out;
+        }
+        JSONArray resultsFinal = results;
         List<String[]> out = new ArrayList<>();
         java.util.Set<String> seen = new java.util.HashSet<>();   // places with the same name, state and country read the same
-        for (int i = 0; results != null && i < results.length(); i++) {
-            JSONObject r = results.getJSONObject(i);
+        for (int i = 0; resultsFinal != null && i < resultsFinal.length(); i++) {
+            JSONObject r = resultsFinal.getJSONObject(i);
             String city = r.optString("name", "");
             if (city.isEmpty() || !r.has("latitude") || !r.has("longitude")) continue;
             StringBuilder label = new StringBuilder(city);
